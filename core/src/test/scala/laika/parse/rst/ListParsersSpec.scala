@@ -484,6 +484,17 @@ class ListParsersSpec extends FlatSpec
     Parsing (input) should produce (root( optL( oli("-a", p("Line1\nLine2"), p("Line3")), oli("-b", "Option2"))))
   }
   
+  it should "parse a options with 2 spaces" in {
+    val input = """-a  Output all.""".stripMargin
+    Parsing (input) should produce (root( optL(
+      oli("-a", "Output all."))))
+  }
+
+  it should "parse a options with 3 spaces" in {
+    val input = """-a   Output all.""".stripMargin
+    Parsing (input) should produce (root( optL(
+      oli("-a", "Output all."))))
+  }
   
   
   "The line block parser" should "parse a block with out continuation or indentation" in {
