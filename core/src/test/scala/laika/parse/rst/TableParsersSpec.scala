@@ -230,6 +230,14 @@ class TableParsersSpec extends FlatSpec
     Parsing (input) should produce (root( Table(TableHead(List(row(Cell(HeadCell,List(p("a"))), Cell(HeadCell,List(p("b")))))), 
                                                TableBody(List(strrow("c","d"))))))
   }
-  
+
+  it should "parse tables with east asian characters" in {
+    val input = """============  ==========
+      | あいうえお    漢字文字
+      | 훈민정음      alphabet
+      |============  ==========""".stripMargin
+    Parsing (input) should produce (root( table(strrow("あいうえお","漢字文字"), strrow("훈민정음","alphabet"))))
+  }
+
   
 }
