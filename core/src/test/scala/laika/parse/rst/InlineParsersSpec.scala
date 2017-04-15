@@ -282,9 +282,25 @@ class InlineParsersSpec extends FlatSpec
     Parsing ("some {user@domain.com} here") should produce (spans(txt("some {user"), 
         Reverse(4, link(txt(email)).url("mailto:"+email), txt("@domain.com")), txt("} here")))
   }
-  
-  
-  
+
+  it should "parse a http URI containing IP address, starts with 3digit" in {
+    val uri = "http://127.0.0.1"
+    Parsing ("some http://127.0.0.1/. here") should produce (spans(txt("some http"), 
+        Reverse(4, link(txt(uri)).url(uri), txt("://127.0.0.1")), txt("/. here")))
+  }
+
+  it should "parse a http URI containing IP address, starts with 2 digit" in {
+    val uri = "http://10.20.30.40"
+    Parsing ("some http://10.20.30.40/. here") should produce (spans(txt("some http"), 
+        Reverse(4, link(txt(uri)).url(uri), txt("://10.20.30.40")), txt("/. here")))
+  }
+
+  it should "parse a http URI containing IP address, starts with 1 digit" in {
+    val uri = "http://1.2.3.4"
+    Parsing ("some http://1.2.3.4/. here") should produce (spans(txt("some http"), 
+        Reverse(4, link(txt(uri)).url(uri), txt("://1.2.3.4")), txt("/. here")))
+  }
+
   "A backslash " should "cause a following character not to be treated as markup" in {
     Parsing ("""some \*text* here""") should produce (spans(txt("some *text* here")))
   }
