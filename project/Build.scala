@@ -45,6 +45,8 @@ object Build extends Build {
     val config    = "com.typesafe"  % "config"     % "1.0.2"
     
     val fop       = "org.apache.xmlgraphics" % "fop" % "2.1" 
+
+    val icu4j     = "com.ibm.icu"   % "icu4j"      % "58.2"
     
   }
   
@@ -125,7 +127,8 @@ object Build extends Build {
     .settings(libraryDependencies ++= Seq(
       Dependencies.config,
       Dependencies.scalatest, 
-      Dependencies.jTidy
+      Dependencies.jTidy,
+      Dependencies.icu4j
     ))
     
   lazy val pdf = Project("laika-pdf", file("pdf"))
