@@ -37,6 +37,9 @@ trait MarkupParsers extends BaseParsers {
    */
   implicit def charToTraversable (char: Char): Traversable[Char] = Set(char)
   
+  import laika.util.{DisplayWidthString, DisplayWidthCharSequence}
+  private implicit def DWString(string: String) = new DisplayWidthString(string)
+  private implicit def DWCharSeqence(chars: CharSequence) = new DisplayWidthCharSequence(chars)
 
   /** Succeeds at the end of a line, including the end of the input.
    *  Produces an empty string as a result and consumes any new line characters.
@@ -44,6 +47,7 @@ trait MarkupParsers extends BaseParsers {
   def eol: Parser[String] = Parser { in =>
       if (in.atEnd) Success("", in) 
       else if (in.first == '\n') Success("", in.rest)
+      //else if (in.first == '\r' && in.source.displayWidth > in.offset + 1 && in.source.charAtDisplayWidth(in.offset + 1) == '\n') Success("", in.drop(2))
       else if (in.first == '\r' && in.source.length > in.offset + 1 && in.source.charAt(in.offset + 1) == '\n') Success("", in.drop(2))
       else Failure("Not at end of line", in)
   }  
@@ -214,12 +218,14 @@ trait MarkupParsers extends BaseParsers {
     
     def newParser (min: Int, max: Int, failAtEof: Boolean, consumeLastChar: Boolean, isStopChar: Char => Boolean) = Parser { in =>
       val source = in.source
+      //val end = source.displayWidth
       val end = source.length
       val maxOffset = if (max > 0) in.offset + max else end
       
       def result (offset: Int, consumeLast: Boolean = false, onStopChar: Boolean = false) = {
         if (offset - in.offset >= min) {
           val consumeTo = if (consumeLast) offset + 1 else offset
+          //Success((source.subSequenceDisplayWidth(in.offset, offset).toString, onStopChar), in.drop(consumeTo - in.offset))
           Success((source.subSequence(in.offset, offset).toString, onStopChar), in.drop(consumeTo - in.offset))
         }
         else 
@@ -230,6 +236,7 @@ trait MarkupParsers extends BaseParsers {
       def parse (offset: Int): ParseResult[(String,Boolean)] = {
         if (offset == end) { if (failAtEof) Failure("unexpected end of input", in) else result(offset) }
         else {
+          //val c = source.charAtDisplayWidth(offset)
           val c = source.charAt(offset)
           if (!p(c)) result(offset, consumeLastChar)
           else if (offset == maxOffset) result(offset)
@@ -255,10 +262,12 @@ trait MarkupParsers extends BaseParsers {
     def newParser (min: Int, max: Int, failAtEof: Boolean, consumeLastChar: Boolean, isStopChar: Char => Boolean) = Parser { in =>
     
       lazy val parser = until
+      //val maxOffset = if (max > 0) in.offset + max else in.source.displayWidth
       val maxOffset = if (max > 0) in.offset + max else in.source.length
       
       def result (resultOffset: Int, next: Reader, onStopChar: Boolean = false) = {
         if (resultOffset - in.offset >= min) 
+          //Success((in.source.subSequenceDisplayWidth(in.offset, resultOffset).toString, onStopChar), next)
           Success((in.source.subSequence(in.offset, resultOffset).toString, onStopChar), next)
         else 
           Failure(s"expected at least $min characters, got only ${next.offset-in.offset}", in)
