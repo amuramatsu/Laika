@@ -44,9 +44,17 @@ class DisplayWidthString(string: String) {
   /** Return lengthes of string at each codepoint
     */
   private def getLengthOfEachCodePoint(str: String) = {
-    val charWidth = toCodePointArray(str).map{ getCharDisplayWidth(_) }
-    (0 until charWidth.length).map{
-      n => (charWidth take n).sum
+    import scala.collection.mutable.ArraySeq
+    if (str.length == 0) {
+      new ArraySeq[Int](0)
+    }
+    else {
+      val charWidth = toCodePointArray(str) map { getCharDisplayWidth(_) }
+      val result = new ArraySeq[Int](charWidth.length)
+      result(0) = 0
+      for (i <- 0 until charWidth.length-1)
+        result(i+1) = result(i) + charWidth(i)
+      result
     }
   }
 
