@@ -323,19 +323,6 @@ trait MarkupParsersDW extends MarkupParsers {
   private implicit def DWString(string: String) = new DisplayWidthString(string)
   private implicit def DWCharSeqence(chars: CharSequence) = new DisplayWidthCharSequence(chars)
 
-  /** Consumes any number of consecutive characters that are not one of the specified characters.
-   *  Always succeeds unless a minimum number of required matches is specified.
-   */
-  override def anyBut (chars: Char*): TextParser = { // IMPLEMENT ME
-    val p: Char => Boolean = chars.length match {
-      case 0 => c => true
-      case 1 => val c = chars(0); _ != c
-      case 2 => val c1 = chars(0); val c2 = chars(1); c => c != c1 && c != c2
-      case _ => val lookup = optimizedCharLookup(chars:_*); !lookup(_)
-    }
-    anyWhile(p)
-  }
-  
   /** Consumes any number of consecutive characters which satisfy the specified predicate.
    *  Always succeeds unless a minimum number of required matches is specified.
    */
@@ -343,14 +330,23 @@ trait MarkupParsersDW extends MarkupParsers {
     
     def newParser (min: Int, max: Int, failAtEof: Boolean, consumeLastChar: Boolean, isStopChar: Char => Boolean) = Parser { in =>
       val source = in.source
+      val sourceStringsAtEachColumn = source.stringsAtEachColumn
       val end = source.displayWidth
       val maxOffset = if (max > 0) in.offset + max else end
       
       def result (offset: Int, consumeLast: Boolean = false, onStopChar: Boolean = false) = {
         if (offset - in.offset >= min) {
-          val subStringFrom0 = source.subSequenceDisplayWidth(0, offset).toString
-          val consumeTo = subStringFrom0.length + (if (consumeLast) 1 else 0)
-          Success((source.subSequenceDisplayWidth(in.offset, offset).toString, onStopChar), in.drop(consumeTo - in.offset))
+          val consumeTo = if (consumeLast) {
+            offset + sourceStringsAtEachColumn(offset).length
+          }
+          else if (offset != 0) {
+            offset + sourceStringsAtEachColumn(offset-1).length - 1
+          }
+          else {
+            offset
+          }
+          Success(((in.offset until offset) map { sourceStringsAtEachColumn(_) } mkString "", onStopChar),
+            in.drop(consumeTo - in.offset))
         }
         else 
           Failure(s"expected at least $min characters, got only ${offset-in.offset}", in)
@@ -358,13 +354,14 @@ trait MarkupParsersDW extends MarkupParsers {
     
       @tailrec
       def parse (offset: Int): ParseResult[(String,Boolean)] = {
-        if (offset == end) { if (failAtEof) Failure("unexpected end of input", in) else result(offset) }
+        if (offset >= end) { if (failAtEof) Failure("unexpected end of input", in) else result(offset) }
         else {
-          val c = source.charAtDisplayWidth(offset)
-          if (!p(c)) result(offset, consumeLastChar)
-          else if (offset == maxOffset) result(offset)
-          else if (isStopChar(c)) result(offset, onStopChar = true)
-          else parse(offset + 1)
+          val s = sourceStringsAtEachColumn(offset)
+          val next_offset = if (s.length == 0) { offset + 1 } else { offset + s.length }
+          if (s.length != 0 && !p(s.charAt(0))) result(offset, consumeLastChar)
+          else if (offset >= maxOffset) result(offset)
+          else if (s.length != 0 && isStopChar(s.charAt(0))) result(offset, onStopChar = true)
+          else parse(next_offset)
         }
       }
     

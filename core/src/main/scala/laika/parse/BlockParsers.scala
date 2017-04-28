@@ -39,7 +39,7 @@ import laika.parse.core._
  * 
  *  @author Jens Halm
  */
-trait BlockParsers extends MarkupParsersDW {
+trait BlockParsers extends MarkupParsers {
 
   
   /** The maximum level of block nesting. Some block types like lists
@@ -306,4 +306,11 @@ trait BlockParsers extends MarkupParsersDW {
   }
   
   
+}
+
+/** Block parser with East Asian character Width aware
+ * 
+ *  @author MURAMATSU Atsushi <amura@tomato.sakura.ne.jp>
+ */
+trait BlockParsersDW extends MarkupParsersDW with BlockParsers {
 }

@@ -25,7 +25,7 @@ import scala.collection.mutable.{ListBuffer, Stack}
  * 
  * @author Jens Halm
  */
-trait TableParsers extends laika.parse.BlockParsers { self: InlineParsers => 
+trait TableParsers extends laika.parse.BlockParsersDW { self: InlineParsers => 
 
   
   private abstract class TableElement

@@ -27,10 +27,10 @@ class DisplayWidthString(string: String) {
 
   /** Split strings into codepoint array.
     */
-  private def toCodePointArray(str: String) =
-    (0 until str.codePointCount(0, str.length)) map {
-      str.offsetByCodePoints(0, _)
-    } map { str.codePointAt(_) }
+  private lazy val codePointArray: Array[Int] =
+    ((0 until string.codePointCount(0, string.length)) map {
+      string.offsetByCodePoints(0, _)
+    } map { string.codePointAt(_) }).toArray
 
   /** Check EastAsianWidth by icu4j
     */
@@ -43,13 +43,13 @@ class DisplayWidthString(string: String) {
 
   /** Return lengthes of string at each codepoint
     */
-  private def getLengthOfEachCodePoint(str: String) = {
-    import scala.collection.mutable.ArraySeq
-    if (str.length == 0) {
-      new ArraySeq[Int](0)
+  private lazy val lengthOfEachCodePoint: Seq[Int] = {
+    if (string.length == 0) {
+      Seq[Int]()
     }
     else {
-      val charWidth = toCodePointArray(str) map { getCharDisplayWidth(_) }
+      import scala.collection.mutable.ArraySeq
+      val charWidth = codePointArray map { getCharDisplayWidth(_) }
       val result = new ArraySeq[Int](charWidth.length)
       result(0) = 0
       for (i <- 0 until charWidth.length-1)
@@ -58,15 +58,26 @@ class DisplayWidthString(string: String) {
     }
   }
 
+  /** Split strings to each column
+    */
+  lazy val stringsAtEachColumn: Seq[String] = {
+    (0 until codePointArray.length) flatMap { offset =>
+      getCharDisplayWidth(codePointArray(offset)) match {
+        case 1 => Seq(new String(codePointArray, offset, 1))
+        case 2 => Seq(new String(codePointArray, offset, 1), "")
+      }
+    }
+  }
+
   /** Return display width of string.
    */
-  def displayWidth: Int =
-    toCodePointArray(string).map{ getCharDisplayWidth(_) }.sum
+  lazy val displayWidth: Int =
+    codePointArray.map{ getCharDisplayWidth(_) }.sum
 
   /** Take "num" width string
     */
   def takeDisplayWidth(num: Int): String = {
-    getLengthOfEachCodePoint(string).indexWhere(_ >= num) match {
+    lengthOfEachCodePoint.indexWhere(_ >= num) match {
       case n: Int if n >= 0 => string take string.offsetByCodePoints(0, n)
       case _ => string
     }
@@ -74,21 +85,13 @@ class DisplayWidthString(string: String) {
 
   /** Return Char from String at "num" display column
     */
-  def charAtDisplayWidth(num: Int): Char = {
-    getLengthOfEachCodePoint(string).indexWhere(_ >= num) match {
-      case n: Int if n >= 0 => string charAt string.offsetByCodePoints(0, n)
-      case _ => throw new IndexOutOfBoundsException()
-    }
-  }
+  def charsAtDisplayWidth(num: Int): Seq[Char] =
+    stringsAtEachColumn(num).toCharArray
 
   /** Return sub-sequence of CharSequence, count with display width
     */
-  def subSequenceDisplayWidth(start: Int, end: Int): DisplayWidthCharSequence = {
-    val str = new DisplayWidthString(string)
-    val start_codepos = str.takeDisplayWidth(start).length
-    val end_codepos = str.takeDisplayWidth(end).length
-    new DisplayWidthCharSequence(string.subSequence(start_codepos, end_codepos))
-  }
+  def subSequenceDisplayWidth(start: Int, end: Int) =
+    new DisplayWidthCharSequence((start until end) map { stringsAtEachColumn(_) } mkString "")
 }
 
 /** Calculate display width of CharSequence.
@@ -97,20 +100,25 @@ class DisplayWidthString(string: String) {
  *  @author MURAMATSU Atsushi <amura@tomato.sakura.ne.jp>
  */
 class DisplayWidthCharSequence(chars: CharSequence) {
+  private lazy val string = new DisplayWidthString(chars.toString)
+
   /** Return Char from CharSequence at "num" display column
     */
-  def charAtDisplayWidth(index: Int): Char =
-    (new DisplayWidthString(chars.toString)).charAtDisplayWidth(index)
+  def charsAtDisplayWidth(index: Int): Seq[Char] =
+    string.charsAtDisplayWidth(index)
 
   /** Return display width of CharSequence
     */
-  def displayWidth: Int =
-    (new DisplayWidthString(chars.toString)).displayWidth
+  def displayWidth: Int = string.displayWidth
+
+  /** Split strings to each column
+    */
+  lazy val stringsAtEachColumn: Seq[String] = string.stringsAtEachColumn
 
   /** Return sub-sequence of CharSequence, count with display width
     */
   def subSequenceDisplayWidth(start: Int, end: Int): DisplayWidthCharSequence =
-    (new DisplayWidthString(chars.toString)).subSequenceDisplayWidth(start, end)
+    string.subSequenceDisplayWidth(start, end)
 
-  override def toString = chars.toString
+  override def toString: String = chars.toString
 }
