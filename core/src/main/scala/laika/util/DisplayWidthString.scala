@@ -18,12 +18,30 @@ package laika.util
 
 import com.ibm.icu.lang.{UCharacter, UProperty}
 
+/** Return display width of Character.
+ * 
+ *  @author MURAMATSU Atsushi <amura@tomato.sakura.ne.jp>
+ */
+object CharacterDisplayWidth {
+  /** Check EastAsianWidth by icu4j
+    */
+  def getCharDisplayWidth(codePoint: Int): Int =
+    UCharacter.getIntPropertyValue(codePoint, UProperty.EAST_ASIAN_WIDTH) match {
+      case UCharacter.EastAsianWidth.FULLWIDTH
+         | UCharacter.EastAsianWidth.WIDE  => 2
+      case _ => 1
+    }
+
+  def getCharDisplayWidth(char: Char): Int = getCharDisplayWidth(char: Int)
+}
+
 /** Calculate display width of String.
  *  This class takes care to surrogate pairs and East-Asian Character Width.
  * 
  *  @author MURAMATSU Atsushi <amura@tomato.sakura.ne.jp>
  */
 class DisplayWidthString(string: String) {
+  import CharacterDisplayWidth._
 
   /** Split strings into codepoint array.
     */
@@ -31,15 +49,6 @@ class DisplayWidthString(string: String) {
     ((0 until string.codePointCount(0, string.length)) map {
       string.offsetByCodePoints(0, _)
     } map { string.codePointAt(_) }).toArray
-
-  /** Check EastAsianWidth by icu4j
-    */
-  private def getCharDisplayWidth(codePoint: Int) =
-    UCharacter.getIntPropertyValue(codePoint, UProperty.EAST_ASIAN_WIDTH) match {
-      case UCharacter.EastAsianWidth.FULLWIDTH
-         | UCharacter.EastAsianWidth.WIDE  => 2
-      case _ => 1
-    }
 
   /** Return lengthes of string at each codepoint
     */

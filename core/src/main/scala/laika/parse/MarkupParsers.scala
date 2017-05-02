@@ -319,10 +319,36 @@ trait MarkupParsers extends BaseParsers {
 }
 
 trait MarkupParsersDW extends MarkupParsers {
-  import laika.util.{DisplayWidthString, DisplayWidthCharSequence}
+  import laika.util.{DisplayWidthString, DisplayWidthCharSequence, CharacterDisplayWidth}
+
   private implicit def DWString(string: String) = new DisplayWidthString(string)
   private implicit def DWCharSeqence(chars: CharSequence) = new DisplayWidthCharSequence(chars)
 
+  /** Parses a simple reference name that only allows alphanumerical characters
+   *  and the punctuation characters `-`, `_`, `.`, `:`, `+`.
+   */
+  override val refName: Parser[String] = {
+    val alphanum = anyWhile( c =>
+      Character.isDigit(c) || (CharacterDisplayWidth.getCharDisplayWidth(c) == 1 && Character.isLetter(c))
+    ) min 1
+    val symbol = anyOf('-', '_', '.', ':', '+') take 1
+    
+    alphanum ~ ((symbol ~ alphanum)*) ^^ { 
+      case start ~ rest => start + (rest map { case a~b => a+b }).mkString
+    }
+  }
+
+  /** Succeeds at the end of a line, including the end of the input.
+   *  Produces an empty string as a result and consumes any new line characters.
+   */
+  override def eol: Parser[String] = Parser { in =>
+      val source = in.source
+      if (in.atEnd) Success("", in) 
+      else if (in.first == '\n') Success("", in.rest)
+      else if (in.first == '\r' && source.displayWidth > in.offset + 1 && source.stringsAtEachColumn(in.offset + 1) == '\n') Success("", in.drop(2))
+      else Failure("Not at end of line", in)
+  }  
+  
   /** Consumes any number of consecutive characters which satisfy the specified predicate.
    *  Always succeeds unless a minimum number of required matches is specified.
    */
